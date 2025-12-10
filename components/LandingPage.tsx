@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Check, Youtube, BarChart3, Globe, LinkIcon, FileText, Zap, Menu, X } from './Icons';
+import React, { useState, useEffect } from 'react';
+import { Check, Youtube, BarChart3, Globe, LinkIcon, FileText, Zap, Menu, X, Mail, Lock, User } from './Icons';
+import { packagesApi } from '../services/api';
+import { Package } from '../types';
 
 const features = [
   { icon: Youtube, title: 'Video AI Tự Động', desc: 'Tạo hàng trăm video Youtube mỗi ngày với công nghệ Veo3 AI.' },
@@ -10,31 +12,93 @@ const features = [
   { icon: Zap, title: 'Báo Cáo Real-time', desc: 'Theo dõi thứ hạng và hiệu suất video ngay lập tức.' },
 ];
 
-const plans = [
-  { name: '1 Tháng', price: '499.000đ', duration: '30 ngày', features: ['Tạo 30 video/tháng', 'SEO cơ bản'] },
-  { name: '3 Tháng', price: '1.199.000đ', duration: '90 ngày', oldPrice: '1.497.000đ', save: '-20%', popular: true, features: ['Tạo 150 video/tháng', 'SEO nâng cao', 'Hỗ trợ 24/7'] },
-  { name: '1 Năm', price: '3.599.000đ', duration: '365 ngày', oldPrice: '5.988.000đ', save: '-40%', features: ['Không giới hạn video', 'Full tính năng AI', 'Ưu tiên hỗ trợ'] },
-];
+// Format price to Vietnamese format
+const formatPrice = (price: number): string => {
+  return price.toLocaleString('vi-VN') + 'đ';
+};
 
 interface LandingPageProps {
-  onStart: () => Promise<void>;
+  onLogin: (email: string, password: string) => Promise<boolean>;
+  onRegister: (email: string, password: string, name: string) => Promise<boolean>;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authError, clearAuthError }) => {
   const [showModal, setShowModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [packages, setPackages] = useState<Package[]>([]);
 
-  const handleAuthAction = () => {
+  // Form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Fetch packages on mount
+  useEffect(() => {
+    packagesApi.getAll()
+      .then(setPackages)
+      .catch(console.error);
+  }, []);
+
+  const handleLoginClick = () => {
+    setIsRegisterMode(false);
     setShowModal(true);
     setMobileMenuOpen(false);
+    clearAuthError();
   };
 
-  const handleGoogleLogin = async () => {
+  const handleRegisterClick = () => {
+    setIsRegisterMode(true);
+    setShowModal(true);
+    setMobileMenuOpen(false);
+    clearAuthError();
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setName('');
+    setFormError(null);
+    clearAuthError();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    // Validate confirm password for registration
+    if (isRegisterMode && password !== confirmPassword) {
+      setFormError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
     setIsLoading(true);
-    await onStart();
-    // Component might unmount after login success, but if not:
-    setIsLoading(false); 
+
+    let success: boolean;
+    if (isRegisterMode) {
+      success = await onRegister(email, password, name);
+    } else {
+      success = await onLogin(email, password);
+    }
+
+    setIsLoading(false);
+    if (success) {
+      handleCloseModal();
+    }
+  };
+
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setFormError(null);
+    setConfirmPassword('');
+    clearAuthError();
   };
 
   return (
@@ -57,8 +121,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
            {/* Auth Buttons */}
            <div className="hidden md:flex items-center gap-4">
-             <button onClick={handleAuthAction} className="text-slate-300 hover:text-white font-medium text-sm transition-colors">Đăng nhập</button>
-             <button onClick={handleAuthAction} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 hover:scale-105">
+             <button onClick={handleLoginClick} className="text-slate-300 hover:text-white font-medium text-sm transition-colors">Đăng nhập</button>
+             <button onClick={handleRegisterClick} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 hover:scale-105">
                Đăng ký ngay
              </button>
            </div>
@@ -74,8 +138,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
            <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-4 shadow-xl absolute w-full left-0 top-20">
              <a href="#features" className="block text-slate-300 py-2 font-medium" onClick={() => setMobileMenuOpen(false)}>Tính năng</a>
              <a href="#pricing" className="block text-slate-300 py-2 font-medium" onClick={() => setMobileMenuOpen(false)}>Bảng giá</a>
-             <button onClick={handleAuthAction} className="block w-full text-left text-slate-300 py-2 font-medium">Đăng nhập</button>
-             <button onClick={handleAuthAction} className="block w-full bg-brand-600 text-white py-3 rounded-xl font-bold text-center mt-2">Đăng ký ngay</button>
+             <button onClick={handleLoginClick} className="block w-full text-left text-slate-300 py-2 font-medium">Đăng nhập</button>
+             <button onClick={handleRegisterClick} className="block w-full bg-brand-600 text-white py-3 rounded-xl font-bold text-center mt-2">Đăng ký ngay</button>
            </div>
          )}
       </nav>
@@ -89,7 +153,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
             </span>
-            Công nghệ AI mới nhất 2024
+            Công nghệ AI mới nhất 2025
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
             Tự Động Hóa SEO & <br />
@@ -99,7 +163,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             Giải pháp tất cả trong một giúp bạn thống trị bảng xếp hạng Google và Youtube mà không cần tốn hàng giờ làm việc thủ công.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={handleAuthAction} className="px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-brand-500/25">
+            <button onClick={handleLoginClick} className="px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-brand-500/25">
               Bắt Đầu Ngay
             </button>
             <button className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium text-lg border border-slate-700 transition-all">
@@ -138,27 +202,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <p className="text-slate-400">Chọn gói phù hợp với nhu cầu của bạn</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {plans.map((p, i) => (
-              <div key={i} className={`glass-card p-8 rounded-2xl relative ${p.popular ? 'border-brand-500 ring-1 ring-brand-500/50 bg-brand-900/10' : 'border-slate-700'}`}>
-                {p.popular && (
+            {packages.map((pkg) => (
+              <div key={pkg.id} className={`glass-card p-8 rounded-2xl relative ${pkg.isPopular ? 'border-brand-500 ring-1 ring-brand-500/50 bg-brand-900/10' : 'border-slate-700'}`}>
+                {pkg.isPopular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg shadow-brand-500/30">
                     Phổ biến nhất
                   </div>
                 )}
-                <h3 className="text-xl font-medium text-slate-300 mb-2">{p.name}</h3>
+                <h3 className="text-xl font-medium text-slate-300 mb-2">{pkg.name}</h3>
                 <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-4xl font-bold text-white">{p.price}</span>
-                  {p.oldPrice && <span className="text-slate-500 line-through text-sm">{p.oldPrice}</span>}
+                  <span className="text-4xl font-bold text-white">{formatPrice(pkg.price)}</span>
+                  {pkg.discount > 0 && <span className="text-slate-500 line-through text-sm">{formatPrice(pkg.originalPrice)}</span>}
                 </div>
                 <ul className="space-y-4 mb-8">
-                  {p.features.map((feat, idx) => (
+                  {(pkg.features || []).map((feat, idx) => (
                     <li key={idx} className="flex items-center gap-3 text-slate-300">
                       <Check className="w-5 h-5 text-brand-500 shrink-0" />
                       {feat}
                     </li>
                   ))}
                 </ul>
-                <button onClick={handleAuthAction} className={`w-full py-3 rounded-xl font-bold transition-all ${p.popular ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                <button onClick={handleLoginClick} className={`w-full py-3 rounded-xl font-bold transition-all ${pkg.isPopular ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
                   Mua Ngay
                 </button>
               </div>
@@ -177,7 +241,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <a href="#" className="hover:text-brand-400 transition-colors">Chính sách bảo mật</a>
             <a href="#" className="hover:text-brand-400 transition-colors">Hỗ trợ</a>
           </div>
-          <p>© 2024 Veo3 AI. All rights reserved.</p>
+          <p>© 2025 Veo3 AI. All rights reserved.</p>
         </div>
       </footer>
 
@@ -185,35 +249,109 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {showModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
            <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full relative shadow-2xl">
-             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+             <button onClick={handleCloseModal} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
                <X size={24} />
              </button>
-             
+
              <div className="text-center mb-8">
                <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl mx-auto flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-lg shadow-brand-500/30">V</div>
-               <h2 className="text-2xl font-bold text-white mb-2">Chào mừng đến với Veo3 AI</h2>
-               <p className="text-slate-400">Đăng nhập hoặc đăng ký để bắt đầu hành trình tự động hóa.</p>
+               <h2 className="text-2xl font-bold text-white mb-2">
+                 {isRegisterMode ? 'Tạo tài khoản mới' : 'Đăng nhập'}
+               </h2>
+               <p className="text-slate-400">
+                 {isRegisterMode ? 'Đăng ký để bắt đầu hành trình tự động hóa.' : 'Chào mừng trở lại Veo3 AI.'}
+               </p>
              </div>
 
-             <button 
-               onClick={handleGoogleLogin}
-               disabled={isLoading}
-               className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold text-lg py-4 rounded-xl hover:bg-slate-100 transition-colors mb-6 disabled:opacity-70 disabled:cursor-not-allowed"
-             >
-               {isLoading ? (
-                  <div className="w-6 h-6 border-2 border-slate-300 border-t-brand-600 rounded-full animate-spin"></div>
-               ) : (
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-               )}
-               {isLoading ? 'Đang kết nối...' : 'Tiếp tục với Google'}
-             </button>
+             {/* Error Message */}
+             {/* Error Messages */}
+             {(authError || formError) && (
+               <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
+                 {formError || authError}
+               </div>
+             )}
 
-             <p className="text-center text-xs text-slate-500 max-w-xs mx-auto">
+             <form onSubmit={handleSubmit} className="space-y-4">
+               {isRegisterMode && (
+                 <div className="relative">
+                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                   <input
+                     type="text"
+                     placeholder="Họ và tên"
+                     value={name}
+                     onChange={(e) => setName(e.target.value)}
+                     required
+                     className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                   />
+                 </div>
+               )}
+
+               <div className="relative">
+                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                 <input
+                   type="email"
+                   placeholder="Email"
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                   required
+                   className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                 />
+               </div>
+
+               <div className="relative">
+                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                 <input
+                   type="password"
+                   placeholder="Mật khẩu"
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                   required
+                   minLength={6}
+                   className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                 />
+               </div>
+
+               {isRegisterMode && (
+                 <div className="relative">
+                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                   <input
+                     type="password"
+                     placeholder="Xác nhận mật khẩu"
+                     value={confirmPassword}
+                     onChange={(e) => setConfirmPassword(e.target.value)}
+                     required
+                     minLength={6}
+                     className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                   />
+                 </div>
+               )}
+
+               <button
+                 type="submit"
+                 disabled={isLoading}
+                 className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+               >
+                 {isLoading ? (
+                   <>
+                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                     Đang xử lý...
+                   </>
+                 ) : (
+                   isRegisterMode ? 'Đăng ký' : 'Đăng nhập'
+                 )}
+               </button>
+             </form>
+
+             <div className="mt-6 text-center">
+               <button
+                 onClick={toggleMode}
+                 className="text-brand-400 hover:text-brand-300 text-sm font-medium transition-colors"
+               >
+                 {isRegisterMode ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
+               </button>
+             </div>
+
+             <p className="mt-6 text-center text-xs text-slate-500 max-w-xs mx-auto">
                Bằng việc tiếp tục, bạn đồng ý với <a href="#" className="underline hover:text-slate-400">Điều khoản sử dụng</a> và <a href="#" className="underline hover:text-slate-400">Chính sách bảo mật</a> của chúng tôi.
              </p>
            </div>

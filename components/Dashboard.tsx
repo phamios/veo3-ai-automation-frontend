@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { User, Package } from '../types';
-import { dataService } from '../services/mockApi';
-import { Check, User as UserIcon, LogOut, Clock } from './Icons';
+import { User, Package, Order, OrderStatus } from '../types';
+import { packagesApi, ordersApi, ApiError } from '../services/api';
+import { Check, User as UserIcon, LogOut, Clock, AlertCircle, FileText, RefreshCw } from './Icons';
 
 interface DashboardProps {
   user: User;
@@ -9,17 +9,57 @@ interface DashboardProps {
   onSelectPackage: (pkg: Package) => void;
 }
 
+// Status display helpers
+const statusLabels: Record<OrderStatus, string> = {
+  [OrderStatus.PENDING]: 'Chờ thanh toán',
+  [OrderStatus.PROCESSING]: 'Đang xử lý',
+  [OrderStatus.COMPLETED]: 'Hoàn thành',
+  [OrderStatus.REJECTED]: 'Đã từ chối',
+  [OrderStatus.EXPIRED]: 'Đã hết hạn',
+};
+
+const statusColors: Record<OrderStatus, string> = {
+  [OrderStatus.PENDING]: 'bg-yellow-500/20 text-yellow-400',
+  [OrderStatus.PROCESSING]: 'bg-blue-500/20 text-blue-400',
+  [OrderStatus.COMPLETED]: 'bg-green-500/20 text-green-400',
+  [OrderStatus.REJECTED]: 'bg-red-500/20 text-red-400',
+  [OrderStatus.EXPIRED]: 'bg-slate-500/20 text-slate-400',
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onSelectPackage }) => {
   const [packages, setPackages] = useState<Package[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPackages = async () => {
-      const data = await dataService.getPackages();
-      setPackages(data);
-      setLoading(false);
+    const fetchData = async () => {
+      // Fetch packages
+      try {
+        const data = await packagesApi.getAll();
+        setPackages(data);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError('Không thể tải danh sách gói dịch vụ');
+        }
+      } finally {
+        setLoading(false);
+      }
+
+      // Fetch orders
+      try {
+        const result = await ordersApi.getMyOrders(1, 20);
+        setOrders(result.orders);
+      } catch (err) {
+        console.error('Failed to fetch orders:', err);
+      } finally {
+        setOrdersLoading(false);
+      }
     };
-    fetchPackages();
+    fetchData();
   }, []);
 
   return (
@@ -50,10 +90,81 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onSelectPackage }
           </button>
         </div>
 
+        {/* My Orders Section */}
+        {orders.length > 0 && (
+          <div className="mb-12">
+            <h3 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+              <FileText className="w-6 h-6 text-brand-400" />
+              Đơn hàng của tôi
+            </h3>
+            <div className="glass-card rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Gói</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Số tiền</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Nội dung CK</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Trạng thái</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Ngày tạo</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">License Key</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/50">
+                    {orders.map((order) => (
+                      <tr key={order.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4 text-white font-medium">{order.packageName}</td>
+                        <td className="px-6 py-4 text-brand-300 font-semibold">{order.amount.toLocaleString('vi-VN')}đ</td>
+                        <td className="px-6 py-4 text-slate-400 font-mono text-sm">{order.transferContent}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
+                            {statusLabels[order.status]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-400 text-sm">
+                          {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                        </td>
+                        <td className="px-6 py-4">
+                          {order.licenseKey ? (
+                            <span className="font-mono text-green-400 text-sm">{order.licenseKey}</span>
+                          ) : (
+                            <span className="text-slate-500 text-sm">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {ordersLoading && (
+          <div className="mb-12 text-center py-8">
+            <RefreshCw className="w-6 h-6 text-brand-400 animate-spin mx-auto mb-2" />
+            <p className="text-slate-500 text-sm">Đang tải đơn hàng...</p>
+          </div>
+        )}
+
         <h3 className="text-2xl font-bold mb-8 text-white">Chọn Gói Dịch Vụ</h3>
 
         {loading ? (
-          <div className="text-center py-20 text-slate-500">Đang tải danh sách gói...</div>
+          <div className="text-center py-20">
+            <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-500">Đang tải danh sách gói...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {packages.map((pkg) => (

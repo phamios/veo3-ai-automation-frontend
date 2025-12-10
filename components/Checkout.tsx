@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import { Package, Order, OrderStatus } from '../types';
-import { dataService } from '../services/mockApi';
+import { ordersApi, ApiError } from '../services/api';
 import { ArrowLeft, CheckCircle, Copy, AlertCircle, CreditCard, RefreshCw } from 'lucide-react';
 import { User } from '../types';
+
+// Hardcoded bank info
+const BANK_INFO = {
+  bankName: 'BIDV',
+  accountNumber: '3710702179',
+  accountName: 'Khuong The Vu',
+};
 
 interface CheckoutProps {
   user: User;
@@ -13,10 +20,12 @@ interface CheckoutProps {
 
 const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [paymentMethod, setPaymentMethod] = useState<'VND' | 'USDT'>('VND');
+  const [paymentMethod, setPaymentMethod] = useState<'VND' | 'USDT' | null>(null);
   const [showUSDTAlert, setShowUSDTAlert] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
+  const [payment, setPayment] = useState<PaymentInfo | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSelectMethod = (method: 'VND' | 'USDT') => {
     if (method === 'USDT') {
@@ -24,30 +33,57 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
       return;
     }
     setPaymentMethod(method);
-    initOrder();
+  };
+
+  const handleContinue = () => {
+    if (paymentMethod === 'VND') {
+      initOrder();
+    }
   };
 
   const initOrder = async () => {
     setIsProcessing(true);
-    const newOrder = await dataService.createOrder(user.id, user.email, pkg);
-    setOrder(newOrder);
-    setStep(2);
-    setIsProcessing(false);
+    setError(null);
+    try {
+      const result = await ordersApi.create(pkg.id);
+      setOrder(result.order);
+      setPayment(result.payment);
+      setStep(2);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Không thể tạo đơn hàng. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleConfirmPayment = async () => {
     if (!order) return;
     setIsProcessing(true);
-    await dataService.confirmPayment(order.id);
-    setStep(3);
-    setIsProcessing(false);
+    setError(null);
+    try {
+      await ordersApi.confirmPayment(order.id);
+      setStep(3);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Không thể xác nhận thanh toán. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  // VietQR QuickLink
-  // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>
-  const qrUrl = order 
-    ? `https://img.vietqr.io/image/MB-0987654321-compact2.png?amount=${order.amount}&addInfo=${encodeURIComponent(order.transferContent)}&accountName=CONG TY VEO3 AI`
-    : '';
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  // Static QR code image
+  const qrUrl = '/images/qr-bank.png';
 
   if (step === 3) {
     return (
@@ -114,28 +150,41 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
 
           {/* Steps */}
           <div className="glass-card p-6 rounded-2xl">
+            {error && (
+              <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                {error}
+              </div>
+            )}
+
             {step === 1 && (
               <>
                 <h3 className="text-xl font-bold text-white mb-6">Chọn phương thức thanh toán</h3>
                 <div className="space-y-4">
-                  <button 
+                  <button
                     onClick={() => handleSelectMethod('VND')}
-                    className="w-full p-4 rounded-xl border border-brand-500 bg-brand-900/20 flex items-center justify-between group hover:bg-brand-900/30 transition-colors"
+                    disabled={isProcessing}
+                    className={`w-full p-4 rounded-xl border flex items-center justify-between transition-colors disabled:opacity-50 ${
+                      paymentMethod === 'VND'
+                        ? 'border-brand-500 bg-brand-900/20 hover:bg-brand-900/30'
+                        : 'border-slate-700 bg-slate-800/50 hover:bg-slate-700/50'
+                    }`}
                   >
                     <div className="flex items-center gap-4">
-                      <CreditCard className="w-6 h-6 text-brand-400" />
+                      <CreditCard className={`w-6 h-6 ${paymentMethod === 'VND' ? 'text-brand-400' : 'text-slate-400'}`} />
                       <div className="text-left">
                         <div className="font-bold text-white">Chuyển khoản Ngân hàng (VNĐ)</div>
-                        <div className="text-sm text-slate-400">VietQR, Internet Banking</div>
                       </div>
                     </div>
-                    <div className="w-5 h-5 rounded-full border-2 border-brand-500 flex items-center justify-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-brand-500" />
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === 'VND' ? 'border-brand-500' : 'border-slate-600'
+                    }`}>
+                      {paymentMethod === 'VND' && <div className="w-2.5 h-2.5 rounded-full bg-brand-500" />}
                     </div>
                   </button>
 
-                  <button 
-                    onClick={() => handleSelectMethod('USDT')}
+                  <button
+                    disabled
                     className="w-full p-4 rounded-xl border border-slate-700 bg-slate-800/50 flex items-center justify-between opacity-70 cursor-not-allowed"
                   >
                     <div className="flex items-center gap-4">
@@ -149,14 +198,27 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
                   </button>
                 </div>
 
-                {isProcessing && <div className="mt-4 text-center text-slate-400 animate-pulse">Đang tạo đơn hàng...</div>}
+                <button
+                  onClick={handleContinue}
+                  disabled={!paymentMethod || isProcessing}
+                  className="w-full mt-6 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      Đang tạo đơn hàng...
+                    </>
+                  ) : (
+                    'Tiếp tục'
+                  )}
+                </button>
               </>
             )}
 
-            {step === 2 && order && (
+            {step === 2 && order && payment && (
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white mb-2">Quét mã QR để thanh toán</h3>
-                
+
                 <div className="bg-white p-4 rounded-xl w-fit mx-auto">
                   <img src={qrUrl} alt="VietQR" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
                 </div>
@@ -164,24 +226,31 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
                 <div className="bg-slate-800/80 p-4 rounded-xl space-y-3 text-sm">
                    <div className="flex justify-between items-center">
                     <span className="text-slate-400">Ngân hàng:</span>
-                    <span className="text-white font-medium">MB Bank</span>
+                    <span className="text-white font-medium">{BANK_INFO.bankName}</span>
                   </div>
                    <div className="flex justify-between items-center">
                     <span className="text-slate-400">Số tài khoản:</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-white font-medium">0987654321</span>
-                      <Copy className="w-4 h-4 text-slate-500 cursor-pointer hover:text-white" />
+                      <span className="text-white font-medium">{BANK_INFO.accountNumber}</span>
+                      <Copy
+                        className="w-4 h-4 text-slate-500 cursor-pointer hover:text-white"
+                        onClick={() => copyToClipboard(payment.bankInfo.accountNumber)}
+                      />
                     </div>
                   </div>
                    <div className="flex justify-between items-center">
                     <span className="text-slate-400">Chủ tài khoản:</span>
-                    <span className="text-white font-medium">CONG TY VEO3 AI</span>
+                    <span className="text-white font-medium">{BANK_INFO.accountName}</span>
                   </div>
                   <div className="border-t border-slate-700 pt-3">
                     <div className="text-slate-400 mb-1">Nội dung chuyển khoản (Bắt buộc):</div>
                     <div className="flex items-center justify-between bg-brand-900/40 border border-brand-500/50 p-3 rounded-lg">
-                      <span className="text-brand-300 font-mono font-bold text-lg">{order.transferContent}</span>
-                      <button className="text-brand-400 hover:text-brand-200" title="Copy">
+                      <span className="text-brand-300 font-mono font-bold text-lg">{payment.transferContent}</span>
+                      <button
+                        className="text-brand-400 hover:text-brand-200"
+                        title="Copy"
+                        onClick={() => copyToClipboard(payment.transferContent)}
+                      >
                         <Copy className="w-5 h-5" />
                       </button>
                     </div>
@@ -192,7 +261,7 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={handleConfirmPayment}
                   disabled={isProcessing}
                   className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -212,7 +281,7 @@ const Checkout: React.FC<CheckoutProps> = ({ user, pkg, onBack, onSuccess }) => 
           <div className="bg-slate-800 rounded-2xl p-6 max-w-sm w-full text-center border border-slate-700">
             <h3 className="text-lg font-bold text-white mb-2">Coming Soon</h3>
             <p className="text-slate-400 mb-6">Thanh toán bằng USDT sẽ sớm ra mắt. Hiện tại vui lòng chọn VNĐ.</p>
-            <button 
+            <button
               onClick={() => setShowUSDTAlert(false)}
               className="w-full py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700"
             >

@@ -29,6 +29,7 @@ export interface Package {
   price: number;
   discount: number;
   isPopular?: boolean;
+  features?: string[];
 }
 
 export interface Order {

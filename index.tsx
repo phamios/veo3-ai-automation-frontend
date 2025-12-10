@@ -1,25 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Checkout from './components/Checkout';
 import AdminDashboard from './components/AdminDashboard';
 import { User, UserRole, Package } from './types';
-import { authService } from './services/mockApi';
+import { apiClient, authApi, ApiError } from './services/api';
 
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<'LANDING' | 'DASHBOARD' | 'CHECKOUT' | 'ADMIN'>('LANDING');
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [isSessionInvalid, setIsSessionInvalid] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Initialize: Check if user is already logged in
+  // Handle session invalidation from API client
+  const handleSessionInvalid = useCallback(() => {
+    setIsSessionInvalid(true);
+    setUser(null);
+    setCurrentView('LANDING');
+    authApi.clearStoredToken();
+  }, []);
+
+  // Set up session invalid callback
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setCurrentView(currentUser.role === UserRole.ADMIN ? 'ADMIN' : 'DASHBOARD');
-    }
+    apiClient.setSessionInvalidCallback(handleSessionInvalid);
+  }, [handleSessionInvalid]);
+
+  // Initialize: Check if user has token and get user info
+  useEffect(() => {
+    const initAuth = async () => {
+      // Check if we had a session before
+      if (authApi.hasStoredToken()) {
+        try {
+          const currentUser = await authApi.getMe();
+          if (currentUser) {
+            setUser(currentUser);
+            setCurrentView(currentUser.role === UserRole.ADMIN ? 'ADMIN' : 'DASHBOARD');
+          } else {
+            authApi.clearStoredToken();
+          }
+        } catch (error) {
+          authApi.clearStoredToken();
+        }
+      }
+      setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   // Single Session Check: Every 30 seconds
@@ -27,27 +56,51 @@ const App = () => {
     if (!user) return;
 
     const checkSession = async () => {
-      const isValid = await authService.checkSessionValidity();
+      const isValid = await authApi.checkSession();
       if (!isValid) {
-        setIsSessionInvalid(true);
-        setUser(null);
-        setCurrentView('LANDING');
-        authService.logout(); // Clear local storage
+        handleSessionInvalid();
       }
     };
 
     const intervalId = setInterval(checkSession, 30000); // 30 seconds
     return () => clearInterval(intervalId);
-  }, [user]);
+  }, [user, handleSessionInvalid]);
 
-  const handleLogin = async (asAdmin: boolean = false) => {
-    const loggedInUser = await authService.login(asAdmin);
-    setUser(loggedInUser);
-    setCurrentView(loggedInUser.role === UserRole.ADMIN ? 'ADMIN' : 'DASHBOARD');
+  const handleLogin = async (email: string, password: string) => {
+    setAuthError(null);
+    try {
+      const loggedInUser = await authApi.login({ email, password });
+      setUser(loggedInUser);
+      setCurrentView(loggedInUser.role === UserRole.ADMIN ? 'ADMIN' : 'DASHBOARD');
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setAuthError(error.message);
+      } else {
+        setAuthError('Có lỗi xảy ra, vui lòng thử lại');
+      }
+      return false;
+    }
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleRegister = async (email: string, password: string, name: string) => {
+    setAuthError(null);
+    try {
+      await authApi.register({ email, password, name });
+      // Auto login after register
+      return await handleLogin(email, password);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setAuthError(error.message);
+      } else {
+        setAuthError('Có lỗi xảy ra, vui lòng thử lại');
+      }
+      return false;
+    }
+  };
+
+  const handleLogout = async () => {
+    await authApi.logout();
     setUser(null);
     setCurrentView('LANDING');
   };
@@ -62,6 +115,18 @@ const App = () => {
     setSelectedPackage(null);
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Render View Logic
   const renderContent = () => {
     if (currentView === 'ADMIN') {
@@ -70,9 +135,9 @@ const App = () => {
 
     if (currentView === 'CHECKOUT' && user && selectedPackage) {
       return (
-        <Checkout 
-          user={user} 
-          pkg={selectedPackage} 
+        <Checkout
+          user={user}
+          pkg={selectedPackage}
           onBack={() => setCurrentView('DASHBOARD')}
           onSuccess={handleCheckoutSuccess}
         />
@@ -81,15 +146,22 @@ const App = () => {
 
     if (currentView === 'DASHBOARD' && user) {
       return (
-        <Dashboard 
-          user={user} 
-          onLogout={handleLogout} 
+        <Dashboard
+          user={user}
+          onLogout={handleLogout}
           onSelectPackage={handleSelectPackage}
         />
       );
     }
 
-    return <LandingPage onStart={() => handleLogin(false)} />;
+    return (
+      <LandingPage
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        authError={authError}
+        clearAuthError={() => setAuthError(null)}
+      />
+    );
   };
 
   return (
@@ -107,38 +179,17 @@ const App = () => {
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Phiên đăng nhập hết hạn</h3>
             <p className="text-slate-400 mb-8 leading-relaxed">
-              Tài khoản của bạn đã được đăng nhập trên một thiết bị khác. 
+              Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.
               <br />
               Vui lòng đăng nhập lại để tiếp tục sử dụng.
             </p>
-            <button 
-              onClick={() => {
-                setIsSessionInvalid(false);
-                handleLogin(false); // Quick re-login for demo, or just close to stay on landing
-              }}
+            <button
+              onClick={() => setIsSessionInvalid(false)}
               className="w-full py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/25"
             >
               Đăng nhập lại
             </button>
-            <button 
-              onClick={() => setIsSessionInvalid(false)}
-              className="mt-4 text-slate-500 hover:text-white text-sm"
-            >
-              Về trang chủ
-            </button>
           </div>
-        </div>
-      )}
-      
-      {/* Dev Tool: Login as Admin Helper */}
-      {!user && (
-        <div className="fixed bottom-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
-          <button 
-            onClick={() => handleLogin(true)} 
-            className="bg-slate-800 text-xs text-slate-500 px-3 py-1 rounded border border-slate-700"
-          >
-            Dev: Login Admin
-          </button>
         </div>
       )}
     </>
