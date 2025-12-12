@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.PROD && import.meta.env.VITE_API_URL
+// Use VITE_API_URL if set, otherwise fallback to relative /api (for dev proxy)
+const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
