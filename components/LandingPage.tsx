@@ -1,15 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Youtube, BarChart3, Globe, LinkIcon, FileText, Zap, Menu, X, Mail, Lock, User } from './Icons';
+import { Check, Youtube, BarChart3, Globe, LinkIcon, FileText, Zap, Menu, X, Mail, Lock, User, Database, Share2, Clock, MessageSquare, Shield, Activity } from './Icons';
 import { packagesApi } from '../services/api';
 import { Package } from '../types';
 
+// Swiper imports
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+
 const features = [
-  { icon: Youtube, title: 'Video AI Tự Động', desc: 'Tạo hàng trăm video Youtube mỗi ngày với công nghệ Veo3 AI.' },
-  { icon: Globe, title: 'SEO On-page & Off-page', desc: 'Tối ưu hóa website tự động, đề xuất từ khóa tiềm năng.' },
-  { icon: BarChart3, title: 'Phân Tích Từ Khóa', desc: 'AI phân tích độ cạnh tranh và xu hướng tìm kiếm thời gian thực.' },
-  { icon: FileText, title: 'Content Chuẩn SEO', desc: 'Tạo nội dung bài viết unique 100%, tối ưu cho Google.' },
-  { icon: LinkIcon, title: 'Xây Dựng Backlink', desc: 'Tự động tìm kiếm và xây dựng hệ thống backlink chất lượng.' },
-  { icon: Zap, title: 'Báo Cáo Real-time', desc: 'Theo dõi thứ hạng và hiệu suất video ngay lập tức.' },
+  { icon: Youtube, title: 'Video AI Tự Động', desc: 'Tạo video AI chất lượng cao, tự động đăng lên YouTube và các nền tảng.' },
+  { icon: Share2, title: 'Đa Nền Tảng', desc: 'Hỗ trợ Facebook, Twitter/X, Telegram, Pinterest, LinkedIn - chia sẻ tự động.' },
+  { icon: Database, title: 'Kết Nối WooCommerce', desc: 'Kết nối trực tiếp với database WordPress/WooCommerce để lấy sản phẩm.' },
+  { icon: Activity, title: 'Quản Lý Hàng Đợi', desc: 'Thêm sản phẩm vào queue, quản lý ưu tiên, tự động retry khi lỗi.' },
+  { icon: Clock, title: 'Lên Lịch Thông Minh', desc: 'Đặt giờ hoạt động, giới hạn hàng ngày, tự động bắt đầu/dừng.' },
+  { icon: MessageSquare, title: 'Template Tùy Chỉnh', desc: 'Tùy chỉnh tin nhắn chia sẻ với các biến sản phẩm động.' },
+  { icon: Shield, title: 'Rate Limiting', desc: 'Tích hợp sẵn giới hạn tốc độ để tránh bị khóa API.' },
+  { icon: Zap, title: 'Theo Dõi Real-time', desc: 'Xem tiến trình chia sẻ với cập nhật trực tiếp ngay lập tức.' },
+];
+
+// App screenshots
+const screenshots = [
+  '/screenshots/1.png',
+  '/screenshots/2.png',
+  '/screenshots/3.png',
+  '/screenshots/4.png',
+  '/screenshots/5.png',
+  '/screenshots/6.png',
+  '/screenshots/7.png',
+  '/screenshots/8.png',
+  '/screenshots/9.png',
+  '/screenshots/10.png',
+  '/screenshots/11.png',
+  '/screenshots/12.png',
 ];
 
 // Format price to Vietnamese format
@@ -105,30 +129,30 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
     <div className="w-full relative">
       {/* Navigation Bar */}
       <nav className="fixed top-0 left-0 right-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 transition-all">
-         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+         <div className="container mx-auto px-4 h-24 flex items-center justify-between gap-4">
            {/* Logo */}
-           <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter text-white cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center shadow-lg shadow-brand-500/20">V</div>
-             Veo3 AI
+           <div className="flex items-center shrink-0 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+             <span className="text-2xl font-bold text-white tracking-tight">CONTINUO</span>
            </div>
 
            {/* Desktop Menu */}
-           <div className="hidden md:flex items-center gap-8 text-slate-300 font-medium text-sm">
-             <a href="#features" className="hover:text-white transition-colors">Tính năng</a>
-             <a href="#pricing" className="hover:text-white transition-colors">Bảng giá</a>
-             <a href="#" className="hover:text-white transition-colors">Hướng dẫn</a>
+           <div className="hidden lg:flex items-center gap-6 text-slate-300 font-medium text-sm">
+             <a href="#features" className="hover:text-white transition-colors whitespace-nowrap">Tính năng</a>
+             <a href="#screenshots" className="hover:text-white transition-colors whitespace-nowrap">Giao diện</a>
+             <a href="#pricing" className="hover:text-white transition-colors whitespace-nowrap">Bảng giá</a>
+             <a href="#" className="hover:text-white transition-colors whitespace-nowrap">Hướng dẫn</a>
            </div>
 
            {/* Auth Buttons */}
-           <div className="hidden md:flex items-center gap-4">
-             <button onClick={handleLoginClick} className="text-slate-300 hover:text-white font-medium text-sm transition-colors">Đăng nhập</button>
-             <button onClick={handleRegisterClick} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 hover:scale-105">
-               Đăng ký ngay
+           <div className="hidden lg:flex items-center gap-3 shrink-0">
+             <button onClick={handleLoginClick} className="text-slate-300 hover:text-white font-medium text-sm transition-colors whitespace-nowrap">Đăng nhập</button>
+             <button onClick={handleRegisterClick} className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 whitespace-nowrap">
+               Đăng ký
              </button>
            </div>
 
            {/* Mobile Menu Button */}
-           <button className="md:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+           <button className="lg:hidden text-white p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
              {mobileMenuOpen ? <X /> : <Menu />}
            </button>
          </div>
@@ -137,6 +161,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
          {mobileMenuOpen && (
            <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-4 shadow-xl absolute w-full left-0 top-20">
              <a href="#features" className="block text-slate-300 py-2 font-medium" onClick={() => setMobileMenuOpen(false)}>Tính năng</a>
+             <a href="#screenshots" className="block text-slate-300 py-2 font-medium" onClick={() => setMobileMenuOpen(false)}>Giao diện</a>
              <a href="#pricing" className="block text-slate-300 py-2 font-medium" onClick={() => setMobileMenuOpen(false)}>Bảng giá</a>
              <button onClick={handleLoginClick} className="block w-full text-left text-slate-300 py-2 font-medium">Đăng nhập</button>
              <button onClick={handleRegisterClick} className="block w-full bg-brand-600 text-white py-3 rounded-xl font-bold text-center mt-2">Đăng ký ngay</button>
@@ -156,8 +181,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
             Công nghệ AI mới nhất 2025
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-            Tự Động Hóa SEO & <br />
-            <span className="gradient-text">Tạo Video Youtube với Veo3</span>
+            Tự Động Hóa <br />
+            <span className="gradient-text">Marketing & Social Media</span>
           </h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
             Giải pháp tất cả trong một giúp bạn thống trị bảng xếp hạng Google và Youtube mà không cần tốn hàng giờ làm việc thủ công.
@@ -217,6 +242,50 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
         </div>
       </section>
 
+      {/* Screenshots Slider */}
+      <section id="screenshots" className="py-20 relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4 text-white">Giao Diện Hệ Thống</h2>
+            <p className="text-slate-400">Khám phá trải nghiệm người dùng tuyệt vời</p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <Swiper
+              modules={[Pagination, Autoplay]}
+              spaceBetween={30}
+              slidesPerView={1}
+              pagination={{ clickable: true }}
+              grabCursor={true}
+              speed={600}
+              freeMode={false}
+              touchRatio={1.5}
+              resistance={true}
+              resistanceRatio={0.85}
+              autoplay={{
+                delay: 4000,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              loop={true}
+              className="screenshots-swiper rounded-2xl overflow-hidden shadow-2xl shadow-brand-500/10"
+            >
+              {screenshots.map((src, index) => (
+                <SwiperSlide key={index}>
+                  <div className="relative aspect-[3/2] bg-slate-800">
+                    <img
+                      src={src}
+                      alt={`Screenshot ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Preview */}
       <section id="pricing" className="py-20 relative">
         <div className="container mx-auto px-4">
@@ -257,14 +326,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
       {/* Footer */}
       <footer className="py-12 border-t border-slate-800 bg-slate-950">
         <div className="container mx-auto px-4 text-center text-slate-500">
-          <h2 className="text-2xl font-bold text-white mb-4">Veo3 AI</h2>
-          <p className="mb-8">Hệ thống tự động hóa hàng đầu cho Content Creator</p>
+          <h2 className="text-2xl font-bold text-white mb-4">CONTINUO</h2>
+          <p className="mb-8">Automate Your Reach - Hệ thống tự động hóa hàng đầu</p>
           <div className="flex justify-center gap-6 mb-8 text-sm font-medium">
             <a href="#" className="hover:text-brand-400 transition-colors">Điều khoản</a>
             <a href="#" className="hover:text-brand-400 transition-colors">Chính sách bảo mật</a>
             <a href="#" className="hover:text-brand-400 transition-colors">Hỗ trợ</a>
           </div>
-          <p>© 2025 Veo3 AI. All rights reserved.</p>
+          <p>© 2025 CONTINUO. All rights reserved.</p>
         </div>
       </footer>
 
@@ -277,12 +346,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
              </button>
 
              <div className="text-center mb-8">
-               <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl mx-auto flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-lg shadow-brand-500/30">V</div>
+               <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl mx-auto flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-lg shadow-brand-500/30">C</div>
                <h2 className="text-2xl font-bold text-white mb-2">
                  {isRegisterMode ? 'Tạo tài khoản mới' : 'Đăng nhập'}
                </h2>
                <p className="text-slate-400">
-                 {isRegisterMode ? 'Đăng ký để bắt đầu hành trình tự động hóa.' : 'Chào mừng trở lại Veo3 AI.'}
+                 {isRegisterMode ? 'Đăng ký để bắt đầu hành trình tự động hóa.' : 'Chào mừng trở lại CONTINUO.'}
                </p>
              </div>
 

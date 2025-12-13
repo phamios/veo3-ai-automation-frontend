@@ -221,6 +221,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onSelectPackage }
                   </div>
                 )}
 
+                {/* Features list */}
+                {pkg.features && pkg.features.length > 0 && (
+                  <ul className="space-y-2 mb-4 flex-grow">
+                    {pkg.features.map((feat, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                        <Check className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 <button 
                   onClick={() => onSelectPackage(pkg)}
                   className={`mt-auto w-full py-2.5 rounded-lg font-semibold transition-all ${pkg.isPopular ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}

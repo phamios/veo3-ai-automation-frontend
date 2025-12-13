@@ -165,7 +165,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white leading-tight">Admin Portal</h1>
-              <p className="text-xs text-slate-400">Veo3 Automation System</p>
+              <p className="text-xs text-slate-400">CONTINUO System</p>
             </div>
           </div>
           <button onClick={onLogout} className="px-4 py-2 rounded-lg hover:bg-slate-700 text-sm font-medium transition-colors">
