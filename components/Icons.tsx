@@ -3,7 +3,8 @@ import {
   Link as LinkIcon, FileText, Zap, LogOut,
   User, CreditCard, Clock, ShieldCheck,
   ChevronDown, Send, Download, Copy, RefreshCw, AlertCircle,
-  Mail, Lock, CheckCircle, XCircle, Loader2, Search, Filter
+  Mail, Lock, CheckCircle, XCircle, Loader2, Search, Filter,
+  Database, Share2, MessageSquare, Shield, Activity
 } from 'lucide-react';
 
 export {
@@ -11,5 +12,6 @@ export {
   LinkIcon, FileText, Zap, LogOut,
   User, CreditCard, Clock, ShieldCheck,
   ChevronDown, Send, Download, Copy, RefreshCw, AlertCircle,
-  Mail, Lock, CheckCircle, XCircle, Loader2, Search, Filter
+  Mail, Lock, CheckCircle, XCircle, Loader2, Search, Filter,
+  Database, Share2, MessageSquare, Shield, Activity
 };

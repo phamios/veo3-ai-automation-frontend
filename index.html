@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Veo3 AI - Tự Động Hóa SEO & Youtube</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>CONTINUO - Automate Your Reach</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
@@ -46,6 +47,82 @@
         background: linear-gradient(to right, #c084fc, #6366f1);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+      }
+
+      /* Swiper custom styles - buttons outside image */
+      .screenshots-wrapper {
+        position: relative;
+        padding: 0 80px;
+      }
+      .screenshots-swiper {
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .screenshots-swiper .swiper-wrapper {
+        transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+      }
+      .screenshots-swiper .swiper-slide {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+      }
+      .screenshots-swiper .swiper-button-next,
+      .screenshots-swiper .swiper-button-prev {
+        color: #8b5cf6;
+        background: transparent;
+        border: none;
+        transition: all 0.3s ease;
+      }
+      .screenshots-swiper .swiper-button-prev {
+        left: -80px;
+      }
+      .screenshots-swiper .swiper-button-next {
+        right: -80px;
+      }
+      .screenshots-swiper .swiper-button-next:after,
+      .screenshots-swiper .swiper-button-prev:after {
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .screenshots-swiper .swiper-button-next:hover,
+      .screenshots-swiper .swiper-button-prev:hover {
+        color: #a78bfa;
+        transform: scale(1.15);
+      }
+      .screenshots-swiper .swiper-pagination {
+        position: relative;
+        margin-top: 28px;
+      }
+      .screenshots-swiper .swiper-pagination-bullet {
+        background: #475569;
+        opacity: 1;
+        width: 12px;
+        height: 12px;
+        margin: 0 6px;
+        transition: all 0.3s ease;
+      }
+      .screenshots-swiper .swiper-pagination-bullet-active {
+        background: #8b5cf6;
+        width: 32px;
+        border-radius: 6px;
+      }
+      @media (max-width: 768px) {
+        .screenshots-wrapper {
+          padding: 0 20px;
+        }
+        .screenshots-swiper .swiper-button-prev {
+          left: -15px;
+        }
+        .screenshots-swiper .swiper-button-next {
+          right: -15px;
+        }
+        .screenshots-swiper .swiper-button-next,
+        .screenshots-swiper .swiper-button-prev {
+          width: 40px;
+          height: 40px;
+        }
+        .screenshots-swiper .swiper-button-next:after,
+        .screenshots-swiper .swiper-button-prev:after {
+          font-size: 14px;
+        }
       }
     </style>
   <script type="importmap">
