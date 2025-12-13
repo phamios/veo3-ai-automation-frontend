@@ -170,6 +170,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegister, authErro
               Xem Demo
             </button>
           </div>
+
+          {/* App Download */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <a
+              href="https://drive.google.com/file/d/1E0xL-pKwJkmzQxOy2EOgOCVGR-MOjQXo/view?usp=drive_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold border border-slate-700 transition-all"
+            >
+              Tải App (Windows)
+            </a>
+            <a
+              href="https://drive.google.com/file/d/1h2lGFGxZFu7iF_oCvyi25sRo77EyhP7F/view?usp=drive_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold border border-slate-700 transition-all"
+            >
+              Tải App (Mac)
+            </a>
+          </div>
+          <div className="mt-2 text-slate-500 text-sm">
+            Windows (.exe) • Mac (.dmg)
+          </div>
         </div>
       </section>
 
