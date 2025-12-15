@@ -4,6 +4,7 @@ import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Checkout from './components/Checkout';
 import AdminDashboard from './components/AdminDashboard';
+import SupportButton from './components/SupportButton';
 import { User, UserRole, Package } from './types';
 import { apiClient, authApi, ApiError } from './services/api';
 
@@ -167,6 +168,9 @@ const App = () => {
   return (
     <>
       {renderContent()}
+
+      {/* Floating Support Button - always visible */}
+      <SupportButton />
 
       {/* Session Invalid Modal */}
       {isSessionInvalid && (
